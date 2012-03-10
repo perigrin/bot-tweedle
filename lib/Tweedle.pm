@@ -1,7 +1,13 @@
 #!/usr/bin/env perl
 package Tweedle;
-our $VERSION = '0.0.1';
 use Moses;
+use namespace::autoclean;
+use HTML::Entities;
+use Net::Twitter;
+
+our $VERSION = '0.02';
+
+# ABSTRACT: A Twitter Bot
 
 with qw(
   MooseX::Getopt
@@ -60,7 +66,6 @@ has _twitter => (
     lazy     => 1,
     accessor => 'twitter',
     default  => sub {
-        require Net::Twitter;
         Net::Twitter->new(
             username => $_[0]->username,
             password => $_[0]->password,
@@ -118,7 +123,6 @@ event irc_public => sub {
       @_[ OBJECT, SENDER, ARG0, ARG1, ARG2 ];
     my $nick    = ( split /!/, $who )[0];
     my $channel = $where->[0];
-    my $botnick = $self->nickname;
 
     if ( my ($msg) = $what =~ /^(?:tweet|twitter)[:,]?\s+(.+)/i ) {
         $self->tweet( $nick => $msg );
@@ -132,7 +136,6 @@ event irc_bot_addressed => sub {
       @_[ OBJECT, SENDER, ARG0, ARG1, ARG2 ];
     my $nick    = ( split /!/, $who )[0];
     my $channel = $where->[0];
-    my $botnick = $self->nickname;
 
     if ( $what =~ /^\s*help\s*$/i ) {
         $self->privmsg( $nick => $self->help );
@@ -144,8 +147,11 @@ event irc_bot_addressed => sub {
 };
 
 event irc_msg => sub {
-    $_[ARG2] = join ' ', $_[0]->nickname, $_[ARG2];
     ( shift->can('irc_bot_addressed') )->(@_);
+};
+
+event worker_stderr => sub {
+        warn $_[1];
 };
 
 event worker_stdout => sub {
@@ -156,6 +162,5 @@ event worker_stdout => sub {
 
 __PACKAGE__->run unless caller;
 
-no Moose;
 1;    # Magic true value required at end of module
 __END__
