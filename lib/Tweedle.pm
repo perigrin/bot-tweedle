@@ -10,28 +10,21 @@ our $VERSION = '0.02';
 # ABSTRACT: A Twitter Bot
 
 with qw(
-  MooseX::Getopt
-  MooseX::Workers
+    MooseX::Getopt
+    MooseX::Workers
 );
 
 #
 # PUBLIC ATTRIBUTES
 #
 
-channels '#openguides';
+# channels '#openguides';
 
 has username => (
     isa      => 'Str',
     is       => 'ro',
     required => 1,
-    default  => sub { 'openguides' },
-);
-
-has password => (
-    isa      => 'Str',
-    is       => 'ro',
-    required => 1,
-    default  => sub { 'CHANGEME' },
+    default  => sub {'openguides'},
 );
 
 has users => (
@@ -39,20 +32,19 @@ has users => (
     is         => 'ro',
     auto_deref => 1,
     default    => sub {
-        [
-            qw(
-              perigrin
-              bob
-              ilmari
-              ivorw
-              jimbo
-              justn
-              knewt
-              Socks
-              Kake
-              Dom
-              hex
-              )
+        [   qw(
+                perigrin
+                bob
+                ilmari
+                ivorw
+                jimbo
+                justn
+                knewt
+                Socks
+                Kake
+                Dom
+                hex
+                )
         ];
     },
 );
@@ -67,8 +59,11 @@ has _twitter => (
     accessor => 'twitter',
     default  => sub {
         Net::Twitter->new(
-            username => $_[0]->username,
-            password => $_[0]->password,
+            traits              => [qw/API::REST OAuth/],
+            consumer_key        => 'xxx',
+            consumer_secret     => 'xxx',
+            access_token        => 'xxx',
+            access_token_secret => 'xxx',
         );
     },
     handles => { update_twitter => 'update', }
@@ -82,7 +77,7 @@ END
 
 sub verify_nick {
     my ( $self, $nick ) = @_;
-    return 1 if grep { /\Q$nick\E/i } $self->users;
+    return 1 if grep {/\Q$nick\E/i} $self->users;
     return 0;
 }
 
@@ -91,16 +86,16 @@ sub send_tweet {
     $self->run_command(
         sub {
             require HTML::Entities;
-            my $ret = $self->update_twitter(
-                "[$nick] $msg") # <> seems to cause issues with motorolla phones
-              || { text => 'nothing posted, something went wrong' };
+            my $ret = $self->update_twitter("[$nick] $msg"
+                )    # <> seems to cause issues with motorolla phones
+                || { text => 'nothing posted, something went wrong' };
             print "$nick|" . decode_entities( $ret->{text} );
         }
     );
 }
 
-my $TOO_LONG_MSG =
-  'The tweet is too long, please make it less than 140 characters';
+my $TOO_LONG_MSG
+    = 'The tweet is too long, please make it less than 140 characters';
 
 my $NO_PERM_MSG = "you don't seem to have permission to tweet";
 
@@ -119,9 +114,9 @@ sub tweet {
 }
 
 event irc_public => sub {
-    my ( $self, $sender, $who, $where, $what ) =
-      @_[ OBJECT, SENDER, ARG0, ARG1, ARG2 ];
-    my $nick    = ( split /!/, $who )[0];
+    my ( $self, $sender, $who, $where, $what )
+        = @_[ OBJECT, SENDER, ARG0, ARG1, ARG2 ];
+    my $nick = ( split /!/, $who )[0];
     my $channel = $where->[0];
 
     if ( my ($msg) = $what =~ /^(?:tweet|twitter)[:,]?\s+(.+)/i ) {
@@ -132,9 +127,9 @@ event irc_public => sub {
 };
 
 event irc_bot_addressed => sub {
-    my ( $self, $sender, $who, $where, $what ) =
-      @_[ OBJECT, SENDER, ARG0, ARG1, ARG2 ];
-    my $nick    = ( split /!/, $who )[0];
+    my ( $self, $sender, $who, $where, $what )
+        = @_[ OBJECT, SENDER, ARG0, ARG1, ARG2 ];
+    my $nick = ( split /!/, $who )[0];
     my $channel = $where->[0];
 
     if ( $what =~ /^\s*help\s*$/i ) {
@@ -151,7 +146,7 @@ event irc_msg => sub {
 };
 
 event worker_stderr => sub {
-        warn $_[1];
+    Carp::cluck $_[1];
 };
 
 event worker_stdout => sub {
